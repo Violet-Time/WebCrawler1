@@ -24,17 +24,17 @@ public class WebCrawler extends JFrame {
         setLocationRelativeTo(null);
         setLayout(new GridBagLayout());
 
-        JPanel top = top();
+        JPanel body = body();
         //JPanel body = body();
         //JPanel footer = footer();
 
-        add(top, new GridBagConstraints(0, 0, 1, 1, 1 , 1, GridBagConstraints.NORTH, GridBagConstraints.BOTH, new Insets(1,1,1,1),0,0));
+        add(body, new GridBagConstraints(0, 0, 1, 1, 1 , 1, GridBagConstraints.NORTH, GridBagConstraints.BOTH, new Insets(1,1,1,1),0,0));
         //add(body, new GridBagConstraints(0, 1, 1, 1, 1 , 1, GridBagConstraints.CENTER, GridBagConstraints.BOTH, new Insets(1,1,1,1),0,0));
         //add(footer, new GridBagConstraints(0, 2, 1, 1, 1 , 1, GridBagConstraints.WEST, GridBagConstraints.BOTH, new Insets(1,1,1,1),0,0));
 
     }
 
-    JPanel top(){
+    JPanel body(){
 
         JPanel top = new JPanel();
         top.setLayout(new GridBagLayout());
@@ -58,6 +58,7 @@ public class WebCrawler extends JFrame {
         depthTextField.setName("DepthTextField");
 
         JCheckBox depthCheck = new JCheckBox();
+        depthCheck.setSelected(true);
         depthCheck.setName("DepthCheckBox");
 
         JLabel depthEnableTextLabel = new JLabel("Enable");
@@ -80,7 +81,7 @@ public class WebCrawler extends JFrame {
 
         JLabel parsedPagesTextLabel = new JLabel("Parsed pages: ");
 
-        JLabel parsedCPagesTextLabel = new JLabel();
+        JLabel parsedCPagesTextLabel = new JLabel("0");
         parsedCPagesTextLabel.setName("ParsedLabel");
 
         JLabel exportTextLabel = new JLabel("Export: ");
@@ -90,7 +91,7 @@ public class WebCrawler extends JFrame {
 
         JButton exportButton = new JButton("Save");
         exportButton.setName("ExportButton");
-//-----
+
         UrlTextField.setPreferredSize(new Dimension(200,30));
 
         runButton.setSize(50,30);
@@ -164,17 +165,24 @@ public class WebCrawler extends JFrame {
         runButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent actionEvent) {
-                //System.out.println(depthCheck.);
+                System.out.println("URL -- " + UrlTextField.getText());
+                System.out.println("depth -- " +depthTextField.getText() + " -- " + depthCheck.isSelected());
+                System.out.println("time -- " +timeLimitTextField.getText() + " -- " + timeLimitCheck.isSelected());
+                System.out.println("worker -- " +workersTextField.getText());
+                if(workers != null && workers.getStatus() == 0){
+                    workers = null;
+                    timerTextLabel.setText("0");
+                    parsedCPagesTextLabel.setText("0");
+                }
                 if(workers == null) {
                     workers = new CreatorWorkers(depthCheck.isSelected() ? Integer.parseInt(depthTextField.getText()) : -1,
                             timeLimitCheck.isSelected() ? Integer.parseInt(timeLimitTextField.getText()) : -1,
-                            Integer.parseInt(workersTextField.getText()),
+                            "".equals(workersTextField.getText()) ? 1 : Integer.parseInt(workersTextField.getText()),
                             timerTextLabel,
                             parsedCPagesTextLabel);
-                    workers.getUrls().add(new MyData(0, UrlTextField.getText()));
+                    workers.getDataForCrawler().add(new MyData(0, UrlTextField.getText()));
                 }
                 if(workers.getStatus() == 0){
-                    workers.timer.start();
                     try {
                         workers.createWorkers();
                     } catch (InterruptedException e) {
@@ -182,7 +190,6 @@ public class WebCrawler extends JFrame {
                     }
                     runButton.setText("Stop");
                 }else if(workers.getStatus() == 1){
-                    workers.timer.stop();
                     System.out.println("Stop");
                     workers.stop();
                     runButton.setText("Run");
@@ -206,82 +213,6 @@ public class WebCrawler extends JFrame {
         return top;
     }
 
-    JPanel body(){
-
-        JPanel textWebPage = new JPanel();
-        textWebPage.setLayout(new GridBagLayout());
-
-        //tableUrlWebPage = new TableUrlWebPage();
-        //urlWebPage = urlWebPage(tableUrlWebPage);
-        //JScrollPane scrollTextAreaWebPage = new JScrollPane(urlWebPage);
-        //scrollTextAreaWebPage.setPreferredSize(new Dimension(600,400));
-
-        //textWebPage.add(scrollTextAreaWebPage,new GridBagConstraints(0, 0, 1, 1, 1 , 1, GridBagConstraints.NORTH, GridBagConstraints.BOTH, new Insets(1,1,1,1),0,0));
-
-        return textWebPage;
-    }
-
-    JPanel footer() throws IOException {
-        JPanel footer = new JPanel();
-        footer.setLayout(new GridBagLayout());
-
-        JLabel exportLabel = new JLabel("Export: ");
-        exportLabel.setName("ExportLabel");
-
-        JTextField textFieldInputExport = new JTextField();
-        textFieldInputExport.setName("ExportUrlTextField");
-
-        JButton exportButton = new JButton("Save");
-        exportButton.setName("ExportButton");
-
-        textFieldInputExport.setPreferredSize(new Dimension(200,30));
-        exportButton.setSize(50,30);
-
-        GridBagConstraints c = new GridBagConstraints();
-
-        c.insets = new Insets(5,5,5,5);
-
-        c.gridx = 0;
-        c.gridy = 0;
-        footer.add(exportLabel, c);
-
-        c.gridx = 1;
-        footer.add(textFieldInputExport, c);
-
-        c.gridx = 2;
-        footer.add(exportButton, c);
-
-        exportButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent actionEvent) {
-                System.out.println(textFieldInputExport.getText());
-               // exportFile(textFieldInputExport.getText());
-            }
-        });
-
-        return footer;
-    }
-
-    JTable urlWebPage(TableUrlWebPage tableUrlWebPage){
-
-        JTable urlWebPage = new JTable(tableUrlWebPage);
-        urlWebPage.setName("TitlesTable");
-        urlWebPage.setEnabled(false);
-
-        return urlWebPage;
-    }
-
-    String searchTitleLabel(String webPage){
-        Matcher matcher = Pattern.compile(
-                "<title>.+</title>"
-        ).matcher(webPage);
-
-        if (matcher.find()) {
-            return matcher.group().replaceAll("</?title>", "");
-        } else {
-            return "";
-        }
-    }
 
 
 

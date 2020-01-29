@@ -17,17 +17,24 @@ public class Worker extends Thread {
     void parse(int depth, String url) throws IOException {
 
         //System.out.println(depth);
-        //System.out.println(url);
+        System.out.println(url);
+        if((workers.getMaxDepth() == -1 || depth <= workers.getMaxDepth()) && !workers.getSaveUrlAndTitle().containsKey(url)) {
 
-        TextWebPage webPage  = new TextWebPage();
+            TextWebPage webPage  = new TextWebPage();
 
-        if (webPage.getWebPage(url) != null) {
+            if (webPage.getWebPage(url) != null) {
 
-            Matcher linksMatcher = Pattern.compile(
-                    "href=[\"\'][A-Za-z%\\d:\\/.]+"
-            ).matcher(webPage.getTheWebPageText());
+                //System.out.println(webPage.getTheWebPageText());
 
-            if(depth < workers.getMaxDepth()) {
+                Matcher linksMatcher = Pattern.compile(
+                        "href=[\"\'][A-Za-z%\\d:\\/.]+"
+                ).matcher(webPage.getTheWebPageText());
+
+                //System.out.println(depth);
+                //System.out.println(workers.getMaxDepth());
+
+
+                    //System.out.println(2);
 
                 while (linksMatcher.find()) {
                     if(workers.getStatus() == 0){
@@ -44,14 +51,16 @@ public class Worker extends Thread {
                     }
                     System.out.println(depth + 1 + " - - " + link);
 
-                    workers.getUrls().add(new MyData(depth + 1, link));
+                    workers.getDataForCrawler().add(new MyData(depth + 1, link));
 
                 }
+                if(depth > 0 ) {
+                    workers.getSaveUrlAndTitle().put(url, searchTitleLabel(webPage.getTheWebPageText()));
+                    workers.parsedCPagesTextLabel.setText(String.valueOf(workers.parsedPages.incrementAndGet()));
+
+                }
+
             }
-
-            workers.getMap().put(url, searchTitleLabel(webPage.getTheWebPageText()));
-            workers.parsedPages.incrementAndGet();
-
         }
     }
 
@@ -75,21 +84,23 @@ public class Worker extends Thread {
                     break;
                 }
                 try {
-                        MyData data = workers.getUrls().poll();
+                    MyData data = workers.getDataForCrawler().poll();
                     if(data != null){
                         workers.workersRunCount.incrementAndGet();
-                        //int depth = Integer.parseInt(str[0]);
-                        //String url = str[1];
                         System.out.println(this.getName());
                         //System.out.println(workers.getMaxDepth());
                         if (workers.getMaxDepth() == -1 || data.getDepth() <= workers.getMaxDepth()) {
                             parse(data.getDepth(), data.getUrl());
                         }
+                        workers.workersRunCount.decrementAndGet();
                         //System.out.println(workers.workersRunCount.decrementAndGet());
                     }else if(workers.workersRunCount.get() < 1){
+                        workers.setStatus(0);
                         break;
+                    }else {
+                        Thread.sleep(500);
                     }
-                }catch (IOException | NullPointerException e){
+                }catch (IOException | NullPointerException | InterruptedException e){
                     e.printStackTrace();
                     workers.workersRunCount.decrementAndGet();
                 }
